@@ -1,10 +1,14 @@
-#' @import xts
-#' @import zoo
+## from 2015, all packages except "base" have to be listed
+## http://developer.r-project.org/blosxom.cgi/R-devel/NEWS/2015/06/29#n2015-06-29
+
+
+#' @import stats
+#' @importFrom utils head
+#' @import graphics
 #' @import methods
 #' @importFrom grDevices rainbow
-#' @importFrom graphics plot abline arrows axis barplot layout legend lines par rect text
-#' @importFrom stats end lag na.omit qnorm dnorm quantile sd start time
-#' @importFrom utils head
+#' @import zoo
+#' @import xts
 
 
 setOldClass("xts") # formally declare S3 class
@@ -13,8 +17,8 @@ setClassUnion("funNULL", members = c("function","NULL")) # function or NULL for 
 # CLASS DEFINITION ------------------------------------------------
 #' @title \code{Strategy}-Class
 #' @description An S4 class to store quantitative strategies and compute various performance figures.
-#' @slot prices Price data of the assets. If return data was given within the constructor, starti
-#' @slot weights Time series of class \code{xts} indicating rowwise weights of the assets.
+#' @slot prices Price data of the assets. If return data was given within the constructor, starting at 100.
+#' @slot weights Time series of class \code{xts} indicating row wise weights of the assets.
 #' @slot indicators List of indicators of class \code{xts}.
 #' @slot strat Name of the strategy function to be called. Could be a full file path to a custom strategy.
 #' @slot strat.params List of parameters as input for the strategy function. List entry names should match parameter names.

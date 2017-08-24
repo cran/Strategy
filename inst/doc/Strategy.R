@@ -1,5 +1,8 @@
 ## ------------------------------------------------------------------------
-require(Strategy)
+library(xts)
+
+## ------------------------------------------------------------------------
+library(Strategy)
 
 # Generate positive random walks for random assets
 set.seed(2)

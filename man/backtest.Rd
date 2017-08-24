@@ -31,7 +31,7 @@ backtest(object, horizon = "6m", data.width = "24m", keep.history = F,
 
 \item{optim.param.max}{A numeric vector providing the maximum values of the parameters that are calibrated.}
 
-\item{optim.param.scale}{A numeric vector providing the scaling of the parameters that are calibrated. It is adviseable to set scaling of the parameters to the smallest unit that makes sense.}
+\item{optim.param.scale}{A numeric vector providing the scaling of the parameters that are calibrated. It is advisable to set scaling of the parameters to the smallest unit that makes sense.}
 
 \item{from}{The date in character format \code{"yyyy-MM-dd"} or as date-object from which assets shall be considered. If \code{NULL}, no restriction is made.}
 
@@ -51,7 +51,7 @@ Walk forward analysis backtest with the specified parameters on an object of cla
 # MA(200)-Strategy
 params <- list(k=20)
 # reduce dataset due to computation time
-assets_r <- assets[tail(index(assets),100)]
+assets_r <- assets[tail(zoo::index(assets),100)]
 myStrat.MA <- Strategy(assets=assets_r, strat="MA", strat.params=params)
 
 # Perform backtest on MA(20)-Strategy with
@@ -64,4 +64,3 @@ backtest(myStrat.MA, horizon="2m", data.width="2m"
          , optim.param.scale=5, printSteps = TRUE, which=1)
 ##End(Not run)
 }
-

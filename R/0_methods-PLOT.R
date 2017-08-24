@@ -1,3 +1,10 @@
+#if (!isGeneric("plot"))
+#  setGeneric("plot", function(x, y, ...) standardGeneric("plot"))
+# setMethod(f = "plot",
+#           signature(x="Strategy",y="missing"),
+#           definition = function(x, y, from=NULL, until=NULL, which.assets=NULL, which.filters=NULL, which.indicators=NULL, main=NULL, show.signals=TRUE, include.costs=TRUE, ...) {
+
+
 #' @export
 #' @name plot
 #' @aliases plot,Strategy,missing-method
@@ -8,7 +15,7 @@
 #'    \item{Indicator area} Plots the indicators and trading signals.
 #'    \item{Performance area} Plots performance of the strategy.
 #' }
-#' @usage \S4method{plot}{Strategy,missing}(x, y, from=NULL, until=NULL
+#' @usage \method{plot}{Strategy}(x, y, from=NULL, until=NULL
 #'        , which.assets=NULL, which.filters=NULL, which.indicators=NULL
 #'        , main=NULL, show.signals=TRUE, include.costs=TRUE, ...)
 #' @param x An object of class \code{Strategy}.
@@ -33,9 +40,7 @@
 #' plot(myStrat.MA, from="2015-01-01", until="2015-12-31", which.assets=1)
 #'
 #' ##End(Not run)
-setMethod(f = "plot",
-          signature(x="Strategy",y="missing"),
-          definition = function(x, y, from=NULL, until=NULL, which.assets=NULL, which.filters=NULL, which.indicators=NULL, main=NULL, show.signals=TRUE, include.costs=TRUE, ...) {
+plot.Strategy <- function(x, y, from=NULL, until=NULL, which.assets=NULL, which.filters=NULL, which.indicators=NULL, main=NULL, show.signals=TRUE, include.costs=TRUE, ...) {
 
             object <- x
             which <- which.assets
@@ -110,20 +115,21 @@ setMethod(f = "plot",
                 layout(matrix(1:layout.len, ncol=2, byrow=TRUE), widths=c(0.8, 0.2), heights=heights)
                 #layout.show(2)
 
-                prices_i <- prices[,i]
+								prices_i <- as.zoo(prices[,i])
 
-                # PLOT1: Plot Price Values
-                par(mar=c(0, margins[2:4]))
-                plot.xts(prices_i, ylim=c(prices.min[i],prices.max[i]), main=plot.main[i], minor.ticks=FALSE, axes=FALSE, type="n")
-                lines(prices_i, col="black")
-                axis(2, las=2)
-                # Draw filter vals
-                if (flen > 0) {
-                  for (fNo in 1:flen) {
-                    lines(filters[[fNo]][,i], col=rainbow(flen)[fNo])
-                  }
-                }
-                graphics::box()
+                # PLOT1: Plot Price Values & FILTERS
+							  par(mar=c(0, margins[2:4]))
+							  plot.zoo(prices_i, ylim=c(prices.min[i],prices.max[i]), main=plot.main[i]
+										, xaxt="n", yaxt="n", type="n", ylab="", xlab="")
+							  lines(prices_i, col="black")
+							  axis(2, las=2)
+							  # Draw filter vals
+							  if (flen > 0) {
+							    for (fNo in 1:flen) {
+							      lines(as.zoo(filters[[fNo]][,i]), col=rainbow(flen)[fNo])
+							    }
+							  }
+							  graphics::box()
 
                 # PLOT2: LEGEND prices
                 par(mar=c(0,0,0,0))
@@ -131,13 +137,12 @@ setMethod(f = "plot",
                 legend.names <- c(colnames(prices_i), names(filters))
                 legend("left", legend=legend.names, col=c("black",rainbow(flen)), lty=rep(1,flen+1), cex=fontsize, bty="n");
 
-
                 if (layout.len == 6) {
 
                   # PLOT3: indicators & signals
                   par(mar=c(0, margins[2], 0, margins[4]))
                   # pseudo for same time domain
-                  plot.xts(prices_i, ylim=c(-1,1), type="n", main="", axes=FALSE, auto.grid = T)
+                  plot.zoo(prices_i, ylim=c(-1,1), type="n", main="", xaxt="n", yaxt="n", xlab="", ylab="")
 
                   # signals
                   if (show.signals==TRUE) {
@@ -147,23 +152,27 @@ setMethod(f = "plot",
                     signals_i <- na.fill(na.locf(merge.xts(signals[,i], prices_i)[,1]), 0) # resolve time domain issue
                     signals_range <- c(-1,1)*max(abs(signals_i), na.rm=TRUE) # 0 is middle
                     # plot init / pseudo range for rectangles
-                    plot.xts(prices_i, ylim=signals_range, type="n", main="", axes=FALSE, auto.grid=FALSE)
+										plot.zoo(signals_i, ylim=signals_range, type="n", main="", xaxt="n", yaxt="n", ylab="", xlab="")
                     # plot colors
                     cols <- signals_i*NA
                     cols[signals_i>0] <- "lightblue"
                     cols[signals_i<0] <- "lightblue" # might be changed later to different signal color
-                    rect(xleft = .index(signals_i), ybottom = rep(0,nrow(signals_i)), xright = c(.index(signals_i[2:nrow(signals_i),]), .index(prices_i[nrow(prices),])), ytop = signals_i, col = cols, border = NA)
-                    #barplot(signals_i, ylim=signals_range, axes=FALSE, axisnames=FALSE, col="lightblue", space=0, border=NA, main="")
+										rect(xleft = index(signals_i), ybottom = rep(0,nrow(signals_i))
+													, xright = c(index(signals_i[2:nrow(signals_i),]), index(prices_i[nrow(prices),]))
+													, ytop = signals_i, col = cols, border = NA)
                   }
-                  abline(h=0, col="gray")
-
-                  # indicators
+									## MIDDLE/ZERO LINE
+              		lines(x=index(prices_i), y=rep(0,nrow(prices_i)), col="grey")
+									
+									# indicators
                   if (ilen > 0) {
                     for (indNo in 1:ilen) { #indNo<-1
                       par(new=TRUE)
                       ind <- merge.xts(indicators[[indNo]], prices_i)[,1] # resolve time domain issue
-                      ind_range <- c(-1,1)*max(abs(ind), na.rm=TRUE)
-                      plot.xts(na.locf(ind), ylim=ind_range, col=rainbow(ilen)[indNo], type="l", main="", axes=FALSE, auto.grid=FALSE)
+											ind <- ind/max(abs(ind), na.rm=TRUE) # make interval [-1, 1]
+                      ind_range <- c(-1,1)
+                      plot.zoo(na.locf(ind), ylim=ind_range, col=rainbow(ilen)[indNo]
+														, type="l", main="", xaxt="n", yaxt="n", ylab="", xlab="")
                     }
                   }
                   graphics::box() # draw box line
@@ -181,12 +190,10 @@ setMethod(f = "plot",
                 # PLOT5: PERFORMANCE
                 par(mar=c(margins[1:2], 0, margins[4]))
                 # pseudo for same time domain
-                plot(prices_i, ylim=range(performance[,i]), type="n", main="", axes=FALSE)
-                axis(1, at=.index(prices_i)[axTicksByTime(prices)], labels=names(axTicksByTime(prices)), las=2)
-                axis(4, at=pretty(range(performance[,i])), las=2) # right axis
-                # PERFORMANCE
-                lines(performance[,i], col="darkgray")
-                graphics::box()
+								performance_i = na.locf(merge.xts(prices_i, performance[,i])[,-1])
+                plot.zoo(performance_i, type="l", main="", xaxt="n", yaxt="n", ylab="", xlab="", col="grey")
+                axis(1, at=index(performance_i)[axTicksByTime(performance_i)], labels=names(axTicksByTime(performance_i)), las=2)
+                axis(4, at=pretty(range(performance_i)), las=2) # right axis
 
                 # PLOT6: LEGEND performance
                 par(mar=c(margins[1],0,0,0))
@@ -200,7 +207,7 @@ setMethod(f = "plot",
               par(mar=par.mar) #reset margins
             }
           } # end if no plotFUN defined
-)
+#)
 
 
 #' @export
@@ -316,7 +323,7 @@ setMethod(f = "plotPerformance",
 #' @param type If the \code{absolute} or \code{relative} drawdown of the performance shall be returned.
 #' @param from The date in character format \code{"yyyy-MM-dd"} or as date-object from which drawdowns shall be plotted. If \code{NULL}, the start date of the performances is used.
 #' @param until The date in character format \code{"yyyy-MM-dd"} or as date-object until which drawdowns shall be plotted. If \code{NULL}, the end date of the performances is used.
-#' @param use.backtest If \code{TRUE}, the signals from the backtesting output are considered for drawdowns calculation. If \code{FALSE}, the signals from the normal strategy execution with the intial parameters are used.
+#' @param use.backtest If \code{TRUE}, the signals from the backtesting output are considered for drawdowns calculation. If \code{FALSE}, the signals from the normal strategy execution with the initial parameters are used.
 #' @param include.costs If \code{FALSE}, the fixed and relative trading costs are NOT considered for performance calculation. Default value is \code{TRUE}. As default values for costs are \code{0}, this argument is redundant if no costs are given.
 #' @param returnValues If \code{TRUE}, the drawdown values are returned.
 #' @param ... Further arguments that can be passed to the underlying plot()-function.
